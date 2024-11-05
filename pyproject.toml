@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["pomt"]
+
+[project]
+name = "pomtoken"
+version = "1.0.0"
+description = "Software artifacts for WACV 2025 'Pruning One More Token is Enough'"
+authors = [
+	{name = "Nicholas J. Eliopoulos", email = "neliopou@purdue.edu"},
+]

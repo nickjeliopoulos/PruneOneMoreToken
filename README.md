@@ -24,6 +24,14 @@ Feel free to submit pull requests!
 
 <!-- Usage Guide -->
 # Usage 
+> [!CAUTION]
+> To best reproduce latency measurements, we encourage users to lock the clock and/or memory rates of their device.
+> See the `scripts/` folder for a brief overview of how this is done on NVIDIA GPUs.
+> We provide two scripts to set maximuim power mode for the NVIDIA Jetson TX2 and the NVIDIA AGX Orin (32GB) devices used in our work.
+
+## Offline Computation
+
+## Benchmarking
 
 <!-- Citation -->
 # BibTeX Citation 

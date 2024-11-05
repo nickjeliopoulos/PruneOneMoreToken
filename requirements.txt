@@ -1,0 +1,4 @@
+-e dinvo2/
+-e hatp/
+-e tome/
+torch>=2.1.0
