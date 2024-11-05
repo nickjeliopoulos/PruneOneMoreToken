@@ -256,11 +256,7 @@ def get_timm_wrapped_class(vit : torch.nn.Module):
 ###
 ### Patch a specific model
 ###
-def timm_apply_pomt_patch(
-    args : Namespace, 
-    vit : torch.nn.Module
-    ):
-
+def timm_apply_pomt_patch(args : Namespace, vit : torch.nn.Module) -> torch.nn.Module:
     ### Generate class
     POMTVisionTransformerClass = get_timm_wrapped_class(vit)
     vit.__class__ = POMTVisionTransformerClass

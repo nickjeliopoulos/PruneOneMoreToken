@@ -10,7 +10,7 @@
 
 This repo contains software artifacts for the WACV 2025 Paper *Pruning One More Token is Enough: Leveraging Latency-Workload Non-Linearities for Vision Transformers on the Edge.*
 
-Within the codebase, our method is referred to as **H**ardware **A**ware **T**oken **P**runing (**HATP**).
+Within the codebase, the name of our method is referred to as **POMT** (Pruning One More Token).
 
 Feel free to submit pull requests!
 
@@ -29,9 +29,19 @@ Feel free to submit pull requests!
 > See the `scripts/` folder for a brief overview of how this is done on NVIDIA GPUs.
 > We provide two scripts to set maximuim power mode for the NVIDIA Jetson TX2 and the NVIDIA AGX Orin (32GB) devices used in our work.
 
-## Offline Computation
+## offline_computation.py
+This script performs the offline pruning schedule computation described in our work.
+Given a device and a pre-trained model, it measures the latency-workload relationship for this device-model pair, then identifies a number of tokens to prune.
 
-## Benchmarking
+Example for DeiT-S with batch-size=4. You can also control the granularity of the grid-search with (start,stop,stride) parameters:
+```bash
+python offline_computation.py --model deit_small --batch-size 4 --grid-token-start 196 --grid-token-stop 2 --grid-token-stride 1
+...
+> Saved plots to bin/deit_small_NVIDIA_AGX_ORIN_bs4.png
+> Computed R=127
+```
+
+## benchmark.py
 
 <!-- Citation -->
 # BibTeX Citation 

@@ -13,8 +13,8 @@ from typing import Tuple
 import torch
 from timm.models.vision_transformer import Attention, Block, VisionTransformer
 
-from hwtome.merge import bipartite_soft_matching, merge_source, merge_wavg
-from hwtome.utils import parse_r
+from tome.merge import bipartite_soft_matching, merge_source, merge_wavg
+from tome.utils import parse_r
 
 class ToMeBlock(Block):
     """
@@ -109,9 +109,7 @@ def make_tome_class(transformer_class):
     return ToMeVisionTransformer
 
 
-def apply_patch(
-    model: VisionTransformer, trace_source: bool = False, prop_attn: bool = True
-):
+def apply_patch(model: VisionTransformer, trace_source: bool = False, prop_attn: bool = True):
     """
     Applies ToMe to this transformer. Afterward, set r using model.r.
 

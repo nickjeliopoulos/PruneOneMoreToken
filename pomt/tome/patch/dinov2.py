@@ -17,8 +17,8 @@ from dinov2.layers.attention import (
 from dinov2.hub.classifiers import _LinearClassifierWrapper
 
 ### ToMe
-from hwtome.merge import bipartite_soft_matching, merge_source, merge_wavg
-from hwtome.utils import parse_r
+from tome.merge import bipartite_soft_matching, merge_source, merge_wavg
+from tome.utils import parse_r
 
 ### Standard
 from typing import Any, Tuple, List, Dict, Callable
@@ -241,9 +241,7 @@ def make_tome_class(transformer_class: _LinearClassifierWrapper):
 ###
 ### "Master" function to apply ToMe to a DinoV2 model
 ###
-def apply_patch(
-    model: _LinearClassifierWrapper, trace_source: bool = False, prop_attn: bool = True
-):
+def apply_patch(model: _LinearClassifierWrapper, trace_source: bool = False, prop_attn: bool = True):
     assert isinstance(model, _LinearClassifierWrapper)
 
     ToMeDinoVisionTransformer = make_tome_class(model.__class__)
@@ -266,6 +264,8 @@ def apply_patch(
 
     ### Iterate over backbone modules
     for module in model.backbone.modules():
+        assert not isinstance(module, MemEffAttention), "MemEffAttention is not supported by POMT"
+
         ### Note: order matters
         if isinstance(module, NestedTensorBlock):
             module.__class__ = ToMeDinoV2NestedTensorBlock
@@ -273,18 +273,6 @@ def apply_patch(
         elif isinstance(module, Block):
             module.__class__ = ToMeDinoV2Block
             module._tome_info = model._tome_info
-
-        ### Note: order matters
-        if isinstance(module, MemEffAttention):
-            ### NOTE: Why is this not supported? memory_efficient_attention requires certain dimensionalities / memory alignment requirements
-            ### that seems to be finicky when we attempt to use memory efficient attention. See commented out section and do some testing to see this
-            ### Therefore, we ignore this flag if we are doing MemoryEfficientAttention
-            # if prop_attn and not warn_prop_attn:
-            #     print(
-            #         "hwtome/patch/dinov2.py: Proportional attention is ignored for MemEffAttention Blocks"
-            #     )
-            #     warn_prop_attn = True
-            module.__class__ = ToMeDinoV2MemEffAttention
         elif isinstance(module, Attention):
             module.__class__ = ToMeDinoV2Attention
 

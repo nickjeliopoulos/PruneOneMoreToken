@@ -2,3 +2,9 @@
 -e hatp/
 -e tome/
 torch>=2.1.0
+torchvision
+numpy
+pandas
+matplotlib
+tqdm
+timm==0.9.12
