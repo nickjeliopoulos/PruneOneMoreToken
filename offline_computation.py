@@ -8,7 +8,7 @@ import os
 from torch.utils.data import DataLoader
 from typing import Dict, Tuple, Any, Callable, Union, Sequence
 
-from pomt.utils import file_formatter, get_offline_compute_arguments, benchmark_latency_ms
+from pomt.utils import file_formatter, get_offline_compute_arguments, benchmark_latency_ms, compute_r
 from pomt.datasets import create_imagenet1k_dataset, create_im1k_dinov2_dataloader, create_im1k_timm_dataloader
 
 ### Perform a grid-search to compute R, the number of tokens to prune
@@ -121,28 +121,14 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
     ### Helper functions for plotting
     def _plot_helper(args : argparse.Namespace, axes, x : numpy.ndarray, y : numpy.ndarray, c : str) -> Any:
         if args.plot_mode == "line":
-            handle = axes.plot(
-                x,
-                y,
-                #s=args.scatter_point_size,
-                linewidth=args.line_plot_size,
-                c=c,
-            )
+            handle = axes.plot(x, y, linewidth=3, c=c)
         elif args.plot_mode == "scatter":
-            handle = axes.scatter(
-                x,
-                y,
-                s=args.scatter_point_size,
-                c=c,
-            )
+            handle = axes.scatter(x, y, s=48, c=c)
         else:
             raise AssertionError("Improper plot mode")
-        
         return handle
 
-    ###
     ### Done with modules - time to plot
-    ###
     x = numpy.array(list(L_n.keys()))
     x = 100.0 * x / numpy.max(x)
 
@@ -170,24 +156,15 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
         nrows=1, ncols=3, figsize=(args.figure_size[0], args.figure_size[1])
     )
 
+    ### Latency Plotting?
     if args.latency:
         latency_handle = _plot_helper(args, axes[0], x, L_n, c="blue")
-        axes[0].spines["top"].set_visible(False)
-        axes[0].spines["right"].set_linewidth(w=3)
-        axes[0].spines["left"].set_linewidth(w=3)
-        axes[0].spines["bottom"].set_linewidth(w=3)
-        axes[0].yaxis.set_major_locator(MultipleLocator(base=50.0))
         axes[0].set_xlabel("Token Density (%)")
         axes[0].set_ylabel("Latency (ms)")
 
     ### Accuracy Plotting?
     if args.accuracy:
         accuracy_handle = _plot_helper(args, axes[1], x, A_n, c="red")
-        axes[1].spines["top"].set_visible(False)
-        axes[1].spines["right"].set_linewidth(w=3)
-        axes[1].spines["left"].set_linewidth(w=3)
-        axes[1].spines["bottom"].set_linewidth(w=3)
-        axes[1].yaxis.set_major_locator(MultipleLocator(base=50.0))
         axes[1].set_xlabel("Token Density (%)")
         axes[1].set_ylabel("Estimated Accuracy (%)")
         axes[1].set_ybound(lower=0, upper=100.0)
@@ -195,34 +172,13 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
     ### Utility Plotting?
     if do_utility_plot:
         utility_handle = _plot_helper(args, axes[2], x, U, c="orange")
-        token_series_index = numpy.argmax(U)
-        target_latency = L_n[token_series_index]
-        target_token_count = x[token_series_index]
-        n_optimal = int( target_token_count * N / 100.0 )
-
-        # print("R={}".format(N - n_optimal))
-
-        axes[2].scatter(
-            [target_token_count],
-            [target_latency],
-            s=2 * args.scatter_point_size,
-            c="red",
-        )
-        
-        axes[2].tick_params(axis="y", width=4, length=8)
-        axes[2].spines["top"].set_visible(False)
-        axes[2].spines["right"].set_linewidth(w=3)
-        axes[2].spines["left"].set_linewidth(w=3)
-        axes[2].spines["bottom"].set_linewidth(w=3)
-        axes[2].yaxis.set_major_locator(MultipleLocator(base=0.50))
         axes[2].set_xlabel("Token Density (%)")
         axes[2].set_ylabel("Utility")
-        axes[2].set_ylim()
+        axes[2].set_ybound(lower=0, upper=1.1)
 
     ### Formatting
     for axis in axes:
         axis.grid(axis="both", color="xkcd:light gray", linestyle="dashed", linewidth=3)
-        axis.tick_params(axis="both", which="both", width=4, length=8, top=False)
         axis.spines["top"].set_visible(False)
         axis.spines["right"].set_linewidth(w=3)
         axis.spines["left"].set_linewidth(w=3)
@@ -236,18 +192,27 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
 if __name__ == "__main__":
     args = get_offline_compute_arguments()
 
+    ### Input checking
+    assert args.latency or args.accuracy, "Supply either --latency or --accuracy"
+    assert not (args.accuracy and args.dataset_root is None), "Supply path leading up the ImageNet1K CLS-LOC/ directory for accuracy estimation"
+
     ### Load the model
     vit = timm.create_model(args.model, pretrained=True)
 
     ### Load the dataset
-    im1k_dataset = create_imagenet1k_dataset(args.dataset_root, False)
-    im1k_dataloader = create_im1k_timm_dataloader(im1k_dataset, args.batch_size)
+    im1k_dataset = None
+    im1k_dataloader = None
+
+    if args.accuracy:
+        im1k_dataset = create_imagenet1k_dataset(args.dataset_root, False)
+        im1k_dataloader = create_im1k_timm_dataloader(im1k_dataset, args.batch_size)
 
     ### Perform offline computation
     L_n, A_n = offline_computation(args, vit, im1k_dataloader)
 
     print(f"L_n:\n{L_n}")
     print(f"A_n:\n{A_n}")
+    print(f"R={compute_r(args, list(L_n.keys()), L_n)}")
 
     ### Generate plots
     if not args.no_plot:
