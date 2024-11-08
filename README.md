@@ -19,9 +19,9 @@ Feel free to submit pull requests!
 
 <!-- Brief Summary, Link to Medium Post -->
 # Summary
-Vision transfomers (ViTs) are a common architectural component of deep neural networks (DNN). Thus, improving ViT efficiency yields downstream benefits to a wide variety of DNNs. One way to improve ViT efficiency is to remove irrelevant tokens or inputs - this general approach is called token sparsification. Works such as Token Merging (ToMe) illustrate the effectiveness of this approach for improving throughput on high-end systems while avoiding significant accuracy degradation. However, if you are deploying your ViT on an edge device, existing methods like ToMe may increase latency while degrading accuracy. We show this occurs because the relationship between latency and workload-size can be non-linear across ViT models and devices. Ultimately, this is because these methods do not consider behavior stemming from hardware characteristics and workload sizes.
+Vision transfomers (ViTs) are a common architectural component of deep neural networks (DNN). Thus, improving ViT efficiency yields downstream benefits to a wide variety of DNNs. One way to improve ViT efficiency is to remove irrelevant tokens or inputs - this general approach is called token sparsification. Works such as Token Merging (ToMe) illustrate the effectiveness of this approach for improving throughput on high-end systems while avoiding significant accuracy degradation. However, if you are deploying your ViT on an edge device, existing methods like ToMe may increase latency while degrading accuracy. We show this occurs because the relationship between latency and workload-size can be non-linear across ViT models and devices. Ultimately, this is because these methods do not consider behavior stemming from hardware characteristics and workload sizes. Our work goes a step further, and integrates this information about latency-workload relationships to improve token sparsification.
 
-[A brief but informative Medium post about our work can be found here](https://medium.com/your-article-link).
+[A brief Medium post about our work can be found here](https://medium.com/your-article-link).
 
 <!-- Structure -->
 # Repository Structure [Relevant Section(s) in Paper]
@@ -44,7 +44,7 @@ python -m pip install ./
 > [!CAUTION]
 > To best reproduce latency measurements, we encourage users to lock the clock and/or memory rates of their device.
 > See the `scripts/` folder for a brief overview of how this is done on NVIDIA GPUs.
-> We provide two scripts to set maximuim power mode for the NVIDIA Jetson TX2 and the NVIDIA AGX Orin (32GB) devices used in our work.
+> We provide two scripts to set maximum power mode for the NVIDIA Jetson TX2 and the NVIDIA AGX Orin (32GB) devices used in our work.
 
 ## offline_computation.py
 This script performs the offline pruning schedule computation described in our work.
