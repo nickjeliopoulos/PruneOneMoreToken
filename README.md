@@ -21,7 +21,7 @@ Feel free to submit pull requests!
 # Summary
 Vision transfomers (ViTs) are a common architectural component of deep neural networks (DNN). Thus, improving ViT efficiency yields downstream benefits to a wide variety of DNNs. One way to improve ViT efficiency is to remove irrelevant tokens or inputs - this general approach is called token sparsification. Works such as Token Merging (ToMe) illustrate the effectiveness of this approach for improving throughput on high-end systems while avoiding significant accuracy degradation. However, if you are deploying your ViT on an edge device, existing methods like ToMe may increase latency while degrading accuracy. We show this occurs because the relationship between latency and workload-size can be non-linear across ViT models and devices. Ultimately, this is because these methods do not consider behavior stemming from hardware characteristics and workload sizes. Our work goes a step further, and integrates this information about latency-workload relationships to improve token sparsification.
 
-[A brief Medium post about our work can be found here](https://medium.com/your-article-link).
+[A brief Medium post about our work can be found here](https://davisjam.medium.com/pruning-one-more-token-is-enough-9bef04dc799b).
 
 <!-- Structure -->
 # Repository Structure [Relevant Section(s) in Paper]
