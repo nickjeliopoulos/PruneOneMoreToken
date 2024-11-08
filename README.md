@@ -61,12 +61,15 @@ python offline_computation.py --model deit_small --batch-size 4 --grid-token-sta
 ## benchmark.py
 
 <!-- Citation -->
-# BibTeX Citation 
+# Citation 
 ```bib
 @article{prune_one_more_2024,
   title   = {Pruning One More Token is Enough: Leveraging Latency-Workload Non-Linearities for Vision Transformers on the Edge},
   author  = {Eliopoulos, Nicholas J. and Jajal, Purvish and Liu, Gaowen and Davis, James and Thiravathukal, George K. and Lu, Yung-Hsiang},
   journal = {WACV},
-  year    = {2023}
+  year    = {2024}
 }
+```
+```
+Eliopoulos, N. J., Jajal, P., Liu, G., Davis, J., Thiravathukal, G. K., & Lu, Y-H. (2024). Pruning one more token is enough: Leveraging latency-workload non-linearities for vision transformers on the edge. WACV.
 ```

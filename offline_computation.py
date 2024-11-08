@@ -3,13 +3,81 @@ import torch.nn as nn
 import timm
 import argparse
 import numpy
-import tqdm
+from tqdm import tqdm
 import os
 from torch.utils.data import DataLoader
 from typing import Dict, Tuple, Any, Callable, Union, Sequence
 
 from pomt.utils import file_formatter, get_offline_compute_arguments, benchmark_latency_ms, compute_r
 from pomt.datasets import create_imagenet1k_dataset, create_im1k_dinov2_dataloader, create_im1k_timm_dataloader
+
+
+###
+### Used for accuracy degradation estimation
+### Randomly remove 'n' tokens from 3D (batched) input token tensor
+###
+def random_prune(x: torch.Tensor, n: int, prefix_tokens: int = 1) -> torch.Tensor:
+    ### Generate indicies to keep
+    random_prune_scores_indices = torch.randperm(x.shape[1] - prefix_tokens, dtype=torch.long)[0:n-prefix_tokens] + prefix_tokens
+    random_prune_scores_indices = torch.cat([torch.tensor(data=list(range(prefix_tokens))), random_prune_scores_indices])
+    x = x[:, random_prune_scores_indices, :]
+    return x
+
+
+###
+### Forward Functions for different models (TIMM ViT, TIMM DeiT, DinoV2)
+### Based on TIMM v0.9.12 - you may have to change if you want to use a more recent TIMM version
+### Simple to implement.
+###
+def random_prune_forward_timm_vit(vit: torch.nn.Module, x: torch.Tensor, n : int, prefix_tokens: int = 1) -> torch.Tensor:
+    x = vit.patch_embed(x)
+    x = vit._pos_embed(x)
+    x = vit.norm_pre(x)
+    x = random_prune(x, n, prefix_tokens)
+    x = vit.blocks(x)
+    x = vit.norm(x)
+    return vit.forward_head(x)
+
+
+###
+### Modified from original DinoV2 forward(...) and prepare_tokens_with_masks(...) - removed "masks" and assuming no register tokens
+### Note: "vit" is actually a _LinearClassifierWrapper, and not exactly a DinoV2 module
+### "vit.backbone" is the underlying DinoV2 module
+### It is easiest to hijack the prepare_tokens_with_masks(...) function
+###
+def random_prune_forward_dinov2(vit: torch.nn.Module, x: torch.Tensor, n : int, prefix_tokens: int = 1) -> torch.Tensor:
+    ### Dinov2 prepare_tokens_with_masks(...) function
+    ### See dinov2/model.py
+    def random_prune_prepare_tokens_with_masks(x: torch.Tensor, masks=None):
+        B, N, W, H = x.shape
+        x = vit.backbone.patch_embed(x)
+        x = torch.cat((vit.backbone.cls_token.expand(B, -1, -1), x), dim=1)
+        x = x + vit.backbone.interpolate_pos_encoding(x, W, H)
+        x = random_prune(x, n, prefix_tokens)
+        return x
+
+    ### Save original forward function
+    original_prepare_tokens_with_masks = vit.backbone.prepare_tokens_with_masks
+    ### Hijack
+    vit.backbone.prepare_tokens_with_masks = random_prune_prepare_tokens_with_masks
+    ### Inference
+    x = vit(x)
+    ### Revert
+    vit.backbone.prepare_tokens_with_masks = original_prepare_tokens_with_masks
+    return x
+
+
+###
+### LUT for forward functions given the class of the ViT model
+### NOTE: In our paper, we use DeiT models without the distilation token (equivalent to ViT architecture)
+### Thus we can use the same TIMM ViT forward for DeiT models
+###
+vit_random_prune_forward_LUT = {
+    "vit" : random_prune_forward_timm_vit,
+    "deit" : random_prune_forward_timm_vit,
+    "dino" : random_prune_forward_dinov2,
+}
+
 
 ### Perform a grid-search to compute R, the number of tokens to prune
 ### By default, generate a plot of latency + accuracy degradation
@@ -28,10 +96,6 @@ def offline_computation(args: argparse.Namespace, vit: torch.nn.Module, dataload
     ### NOTE: We assume there is only a CLS token (prefix_tokens=1) used for all ViTs in this work.
     prefix_tokens = args.prefix_tokens
 
-    ### Number of forward passes for accuracy measurement
-    ### NOTE: You can reduce this to minimize runtime. We use the full dataset for accuracy measurement in our work.
-    accuracy_estimation_sample_count = len(dataloader)
-
     ### Create the grid search problem size
     grid_search_problem = (
         list(
@@ -46,16 +110,31 @@ def offline_computation(args: argparse.Namespace, vit: torch.nn.Module, dataload
 
     progress_bar = tqdm(grid_search_problem)
 
+    if args.accuracy:
+        ### First, get the forward function for the model
+        model_tag_timm_vit = "vit" if "vit" in args.model else None
+        model_tag_deit = "deit" if "deit" in args.model else None
+        model_tag_dino = "dino" if "dino" in args.model else None
+        model_tag = model_tag_timm_vit or model_tag_deit or model_tag_dino
+        assert model_tag is not None, "Model not supported"
+        print(f"Detected model type: {model_tag}")
+        forward_fn = vit_random_prune_forward_LUT[model_tag]
+
+        ### Set maximum sample count
+        accuracy_estimation_sample_count = 1024 // args.batch_size
+        # accuracy_estimation_sample_count = len(dataloader)
+
+
     with torch.no_grad():
         for n in progress_bar:
             ### Break if we want to remove more tokens than possible (due to special tokens)
-            if prefix_tokens - n >= 1:
+            if (n - prefix_tokens) <= 0:
                 break
             
             ### Latency Measurement
             if args.latency:
                 random_input = torch.randn(size=(args.batch_size, 3, 224, 224), device=device, dtype=torch.float32)
-                latency_ms = benchmark_latency_ms(vit, random_input)
+                latency_ms = benchmark_latency_ms(forward_fn, vit, random_input, n, prefix_tokens)
                 L_n[n] = latency_ms
             else:
                 L_n[n] = -1.0
@@ -74,7 +153,7 @@ def offline_computation(args: argparse.Namespace, vit: torch.nn.Module, dataload
                     if batch_index >= accuracy_estimation_sample_count:
                         break
 
-                    model_output = benchmark_latency_ms(vit, input)
+                    model_output = forward_fn(vit, input, n, prefix_tokens)
 
                     ### Argmax, get top 1
                     predicted_output = torch.argmax(model_output, dim=1)
@@ -134,7 +213,7 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
 
     ### Get other series
     U_L = numpy.array(list(L_n.values()))
-    U_A = numpy.array(list(A_n.values())) if args.plot_accuracy else None
+    U_A = numpy.array(list(A_n.values())) if args.accuracy else None
     U = None
 
     N = args.max_vit_token_count
@@ -153,12 +232,12 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
         do_utility_plot = True
 
     figure, axes = plot.subplots(
-        nrows=1, ncols=3, figsize=(args.figure_size[0], args.figure_size[1])
+        nrows=1, ncols=3, figsize=(20, 5)
     )
 
     ### Latency Plotting?
     if args.latency:
-        latency_handle = _plot_helper(args, axes[0], x, L_n, c="blue")
+        latency_handle = _plot_helper(args, axes[0], x, list(L_n.values()), c="blue")
         axes[0].set_xlabel("Token Density (%)")
         axes[0].set_ylabel("Latency (ms)")
 
@@ -198,6 +277,7 @@ if __name__ == "__main__":
 
     ### Load the model
     vit = timm.create_model(args.model, pretrained=True)
+    print(f"Loaded model: {args.model}")
 
     ### Load the dataset
     im1k_dataset = None
@@ -206,15 +286,18 @@ if __name__ == "__main__":
     if args.accuracy:
         im1k_dataset = create_imagenet1k_dataset(args.dataset_root, False)
         im1k_dataloader = create_im1k_timm_dataloader(im1k_dataset, args.batch_size)
+    print(f"Loaded dataset")
 
     ### Perform offline computation
     L_n, A_n = offline_computation(args, vit, im1k_dataloader)
 
-    print(f"L_n:\n{L_n}")
-    print(f"A_n:\n{A_n}")
+    # print(f"L_n:\n{L_n}")
+    # print(f"A_n:\n{A_n}")
     print(f"R={compute_r(args, list(L_n.keys()), L_n)}")
 
     ### Generate plots
     if not args.no_plot:
         figure = generate_plots(args, L_n, A_n)
         figure.savefig(file_formatter(args, "plots", "png"))
+
+    print(f"Done!")

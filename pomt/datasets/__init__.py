@@ -1,6 +1,6 @@
 import torch
 import torchvision.transforms as xform
-from torchvision.datasets import ImageFolder
+from torchvision.datasets import ImageFolder, FakeData
 import os
 
 ### TIMM Imports
@@ -12,6 +12,8 @@ from timm.data.loader import (
     partial,
     _worker_init,
 )
+from timm.data.dataset import IterableImageDataset
+from timm.data.distributed_sampler import OrderedDistributedSampler, RepeatAugSampler
 from timm.data.transforms_factory import create_transform
 
 
@@ -204,8 +206,8 @@ def create_imagenet1k_dataset(
 def create_im1k_dinov2_dataloader(
     dataset: torch.utils.data.Dataset,
     batch_size: int,
-    num_workers: int,
-    is_training: bool,
+    num_workers: int = 4,
+    is_training: bool = False,
 ) -> torch.utils.data.DataLoader:
     ### TIMM ImageNet1K Mean, STD
     ### Used by dinov2/data/transforms.py
@@ -245,8 +247,8 @@ def create_im1k_dinov2_dataloader(
 def create_im1k_timm_dataloader(
     dataset: torch.utils.data.Dataset,
     batch_size: int,
-    num_workers: int,
-    is_training: bool,
+    num_workers: int = 4,
+    is_training: bool = False,
 ) -> torch.utils.data.DataLoader:
     ### Get TIMM Dataloader
     ### NOTE: the context of is_training here is for controlling the type of transform

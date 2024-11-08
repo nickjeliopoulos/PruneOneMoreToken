@@ -4,6 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["pomt"]
+include = ["dinov2", "tome"]
+namespaces = false
 
 [project]
 name = "pomtoken"
@@ -11,4 +13,12 @@ version = "1.0.0"
 description = "Software artifacts for WACV 2025 'Pruning One More Token is Enough'"
 authors = [
 	{name = "Nicholas J. Eliopoulos", email = "neliopou@purdue.edu"},
+]
+dependencies = [
+	"torch>=2.1.0",
+	"torchvision",
+	"timm==0.9.12",
+	"pandas",
+	"matplotlib",
+	"tqdm"
 ]

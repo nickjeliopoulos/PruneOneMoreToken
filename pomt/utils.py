@@ -63,15 +63,12 @@ def benchmark_latency_ms(f : Callable, *args, **kwargs) -> int:
 
 
 ### Compute R
-def compute_r(args: argparse.Namespace, x : List, U : Dict, verbose : bool = True) -> Tuple:
+def compute_r(args: argparse.Namespace, x : List, U : Dict) -> Tuple:
     N = args.max_vit_token_count
     token_series_index = numpy.argmax(x)
     target_token_count = x[token_series_index]
 
     R = N - target_token_count
-
-    if verbose:
-        print("R={}".format(R))
 
     return R
 
