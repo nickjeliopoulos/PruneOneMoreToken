@@ -103,6 +103,9 @@ def benchmark(args: argparse.Namespace, vit: nn.Module, dataloader: DataLoader) 
         ### Compute and store accuracy
         A = 100 * running_accuracy / running_predictions
 
+    ### .CSV report name
+    csv_report_filename = file_formatter(args, "evaluation", "csv")
+
     ### Save as .CSV data
     eval_report = pandas.DataFrame(
         data={
@@ -113,9 +116,10 @@ def benchmark(args: argparse.Namespace, vit: nn.Module, dataloader: DataLoader) 
             "Median Latency (ms)": [L],
         }
     ).to_csv(
-        file_formatter(args, "evaluation", "csv"),
+        csv_report_filename,
         float_format="{:.2f}".format,
     )
+    print(f"Saved report to {csv_report_filename}")
 
     return L, A, eval_report
 

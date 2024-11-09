@@ -52,13 +52,24 @@ Given a device and a pre-trained model, it measures the latency-workload relatio
 
 Example for DeiT-S with batch-size=4. You can also control the granularity of the grid-search with (start,stop,stride) parameters:
 ```bash
-python offline_computation.py --model deit_small --batch-size 4 --grid-token-start 196 --grid-token-stop 2 --grid-token-stride 1
+python offline_computation.py --model deit_small_patch16_224 --batch-size 4 --grid-token-start 196 --grid-token-stop 2 --grid-token-stride 1
+> Loaded model deit_small_patch16_224
 ...
-> Saved plots to bin/deit_small_NVIDIA_AGX_ORIN_bs4.png
-> Computed R=127
+> Computed R=56 given N=197 input tokens
+> Done!
 ```
 
 ## benchmark.py
+Following the previous example, we now benchmark the DeiT-S model with our pruning method using the computed *R*
+`benchmark.py` supports wrapping a TIMM ViT/DeiT models and DinoV2 models with ToMe, Top-K, POMT, or no wrapper (baseline model measurements).
+
+```bash
+python benchmark.py --model deit_small_patch16_224 --batch-size 4 --pomt-R 56
+> Loaded model deit_small_patch16_224
+...
+> Saved report bin/deit_small_patch16_224_bs_4_pomt_R56.csv
+> Done! 
+```
 
 <!-- Citation -->
 # Citation 
