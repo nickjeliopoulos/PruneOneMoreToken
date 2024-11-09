@@ -4,6 +4,7 @@ import numpy
 import argparse
 from typing import Dict, List, Tuple, Any, Callable, Union, Sequence
 
+BENCHMARK_MIN_RUN_TIME=2.0
 
 ### Generic Filename Formatter, for consistency and avoiding having to write f"" strings everywhere
 def file_formatter(args: argparse.Namespace, suffix: str, extension: str) -> str:
@@ -24,7 +25,6 @@ def get_offline_compute_arguments():
     parser.add_argument("--grid-token-end", type=int, default=2)
     parser.add_argument("--grid-token-stride", type=int, default=1)
     parser.add_argument("--alpha", type=float, default=0.5)
-    parser.add_argument("--no-plot", action=st)
     parser.add_argument("--plot-mode", type=str, default="line", choices=["line", "scatter"])
     parser.add_argument("--output-dir", type=str, default="bin/")
     parser.add_argument("--device", type=str, default="cuda:0")
@@ -57,18 +57,24 @@ def benchmark_latency_ms(f : Callable, *args, **kwargs) -> int:
 
     ### NOTE: You can reduce min_run_time to do the grid search faster
     ### For sufficiently large workloads, there may not be enough samples for a reasonably precise measurement
-    measurement = t0.blocked_autorange(min_run_time=16.0)
+    measurement = t0.blocked_autorange(min_run_time=BENCHMARK_MIN_RUN_TIME)
 
     return measurement.median * 1e3 # Convert to milliseconds
 
 
+### Compute Utility
+def compute_utility(args: argparse.Namespace, L: numpy.ndarray, A: numpy.ndarray) -> numpy.ndarray:
+    U_L = 1.0 - (L / numpy.max(L))
+    U_A = A / numpy.max(A)
+    U = args.alpha * U_L + (1.0 - args.alpha) * U_A
+    return U
+
+
 ### Compute R
-def compute_r(args: argparse.Namespace, x : List, U : Dict) -> Tuple:
+def compute_r(args: argparse.Namespace, x : List, U: numpy.ndarray) -> Tuple:
     N = args.max_vit_token_count
-    token_series_index = numpy.argmax(x)
+    token_series_index = numpy.argmax(U)
     target_token_count = x[token_series_index]
-
     R = N - target_token_count
-
     return R
 

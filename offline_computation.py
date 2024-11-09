@@ -8,7 +8,7 @@ import os
 from torch.utils.data import DataLoader
 from typing import Dict, Tuple, Any, Callable, Union, Sequence
 
-from pomt.utils import file_formatter, get_offline_compute_arguments, benchmark_latency_ms, compute_r
+from pomt.utils import file_formatter, get_offline_compute_arguments, benchmark_latency_ms, compute_r, compute_utility
 from pomt.datasets import create_imagenet1k_dataset, create_im1k_dinov2_dataloader, create_im1k_timm_dataloader
 
 
@@ -110,20 +110,19 @@ def offline_computation(args: argparse.Namespace, vit: torch.nn.Module, dataload
 
     progress_bar = tqdm(grid_search_problem)
 
-    if args.accuracy:
-        ### First, get the forward function for the model
-        model_tag_timm_vit = "vit" if "vit" in args.model else None
-        model_tag_deit = "deit" if "deit" in args.model else None
-        model_tag_dino = "dino" if "dino" in args.model else None
-        model_tag = model_tag_timm_vit or model_tag_deit or model_tag_dino
-        assert model_tag is not None, "Model not supported"
-        print(f"Detected model type: {model_tag}")
-        forward_fn = vit_random_prune_forward_LUT[model_tag]
+    ### First, get the forward function for the model
+    model_tag_timm_vit = "vit" if "vit" in args.model else None
+    model_tag_deit = "deit" if "deit" in args.model else None
+    model_tag_dino = "dino" if "dino" in args.model else None
+    model_tag = model_tag_timm_vit or model_tag_deit or model_tag_dino
+    assert model_tag is not None, "Model not supported"
+    print(f"Detected model type: {model_tag}")
+    forward_fn = vit_random_prune_forward_LUT[model_tag]
 
+    if args.accuracy:
         ### Set maximum sample count
         accuracy_estimation_sample_count = 1024 // args.batch_size
         # accuracy_estimation_sample_count = len(dataloader)
-
 
     with torch.no_grad():
         for n in progress_bar:
@@ -133,6 +132,7 @@ def offline_computation(args: argparse.Namespace, vit: torch.nn.Module, dataload
             
             ### Latency Measurement
             if args.latency:
+                progress_bar.set_description(f"Measuring Latency...")
                 random_input = torch.randn(size=(args.batch_size, 3, 224, 224), device=device, dtype=torch.float32)
                 latency_ms = benchmark_latency_ms(forward_fn, vit, random_input, n, prefix_tokens)
                 L_n[n] = latency_ms
@@ -161,6 +161,8 @@ def offline_computation(args: argparse.Namespace, vit: torch.nn.Module, dataload
 
                     running_accuracy += (predicted_output == target).sum().item()
                     running_predictions += target.shape[0]
+
+                    progress_bar.set_description(f"Acc. Batch Idx {1+batch_index}/{accuracy_estimation_sample_count}")
 
                 ### Update token latency lut
                 A_n[n] = 100.0 * running_accuracy / running_predictions
@@ -212,6 +214,8 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
     x = 100.0 * x / numpy.max(x)
 
     ### Get other series
+    L = numpy.array(list(L_n.values()))
+    A = numpy.array(list(A_n.values()))
     U_L = numpy.array(list(L_n.values()))
     U_A = numpy.array(list(A_n.values())) if args.accuracy else None
     U = None
@@ -221,35 +225,28 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
     ### NOTE: We assume there is only a CLS token (prefix_tokens=1) used for all ViTs in this work.
     prefix_tokens = args.prefix_tokens
 
-    ### Utility plot?
-    do_utility_plot = False
-
-    ### Plot Utility in addition to latency and accuracy
-    if args.latency and args.accuracy:
-        U_L = 1.0 - (L_n / max(L_n))
-        U_A = A_n / max(A_n)
-        U = args.alpha * U_L + (1.0 - args.alpha) * U_A
-        do_utility_plot = True
-
     figure, axes = plot.subplots(
         nrows=1, ncols=3, figsize=(20, 5)
     )
 
     ### Latency Plotting?
     if args.latency:
-        latency_handle = _plot_helper(args, axes[0], x, list(L_n.values()), c="blue")
+        latency_handle = _plot_helper(args, axes[0], x, L, c="blue")
         axes[0].set_xlabel("Token Density (%)")
         axes[0].set_ylabel("Latency (ms)")
 
     ### Accuracy Plotting?
     if args.accuracy:
-        accuracy_handle = _plot_helper(args, axes[1], x, A_n, c="red")
+        accuracy_handle = _plot_helper(args, axes[1], x, A, c="red")
         axes[1].set_xlabel("Token Density (%)")
         axes[1].set_ylabel("Estimated Accuracy (%)")
         axes[1].set_ybound(lower=0, upper=100.0)
 
-    ### Utility Plotting?
-    if do_utility_plot:
+    ### Plot Utility in addition to latency and accuracy
+    if args.latency and args.accuracy:
+        U = compute_utility(args, L, A)
+        R = compute_r(args, x, U)
+        print(f"Computed R: {R}")
         utility_handle = _plot_helper(args, axes[2], x, U, c="orange")
         axes[2].set_xlabel("Token Density (%)")
         axes[2].set_ylabel("Utility")
@@ -291,13 +288,9 @@ if __name__ == "__main__":
     ### Perform offline computation
     L_n, A_n = offline_computation(args, vit, im1k_dataloader)
 
-    # print(f"L_n:\n{L_n}")
-    # print(f"A_n:\n{A_n}")
-    print(f"R={compute_r(args, list(L_n.keys()), L_n)}")
-
-    ### Generate plots
-    if not args.no_plot:
-        figure = generate_plots(args, L_n, A_n)
-        figure.savefig(file_formatter(args, "plots", "png"))
+    ### Generate plots, compute R
+    figure = generate_plots(args, L_n, A_n)
+    figure.savefig(file_formatter(args, "plots", "png"))
 
     print(f"Done!")
+    
