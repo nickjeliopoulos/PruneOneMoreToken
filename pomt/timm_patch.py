@@ -9,9 +9,7 @@ import copy
 ### TIMM
 from timm.models.vision_transformer import Block, Attention
 
-###
-### Helper Function
-###
+
 def POMTMetric(softmax_attn : torch.Tensor, v : torch.Tensor, pomt_info : SimpleNamespace) -> torch.Tensor:
         ###
         ### metric_attn Measures how much each token is attended to by all other tokens - this is a metric to gauge token 'importance'
@@ -42,10 +40,7 @@ def POMTMetric(softmax_attn : torch.Tensor, v : torch.Tensor, pomt_info : Simple
         return metric
 
 
-###
-### Top-K Metric
-###
-def TopKMetric(softmax_attn : torch.Tensor, pomt_info : SimpleNamespace) -> torch.Tensor:
+def TopKMetric(softmax_attn : torch.Tensor, topk_info : SimpleNamespace) -> torch.Tensor:
     ### NOTE: Assumes CLS token exists
     ### softmax attn has B, # heads, N, N
     ### Collapse head dimension via average
@@ -55,17 +50,14 @@ def TopKMetric(softmax_attn : torch.Tensor, pomt_info : SimpleNamespace) -> torc
     return metric.unsqueeze(-1)
 
 
-###
-### Top-K Forward
-###
-def TopKForward(x : torch.Tensor, metric : torch.Tensor, pomt_info : SimpleNamespace) -> torch.Tensor:
+def TopKForward(x : torch.Tensor, metric : torch.Tensor, topk_info : SimpleNamespace) -> torch.Tensor:
     ### Apply metric
     B, N, C = x.size()
-    r = pomt_info.r.pop(0)
+    r = topk_info.r.pop(0)
     T = N - r - 1
 
     ### Return early if we don't have to do anything
-    if r == 0 or T <= pomt_info.prefix_tokens:
+    if r == 0 or T <= topk_info.prefix_tokens:
         return x
     
     ### Add offset - since we shaved off the prefix tokens we need to account for that with our indices
@@ -78,7 +70,7 @@ def TopKForward(x : torch.Tensor, metric : torch.Tensor, pomt_info : SimpleNames
 
     x = torch.cat(
         (
-            x[:, 0 : pomt_info.prefix_tokens, :],
+            x[:, 0 : topk_info.prefix_tokens, :],
             torch.gather(x, dim=1, index=kept_indices.expand(B, T, C)),
         ),
         dim=1,
@@ -163,7 +155,7 @@ class POMTAttention(Attention):
 ###
 class TopKTIMMAttention(Attention):
     ### Functions for computing Attention
-    def forward(self, x: torch.Tensor, pomt_info: SimpleNamespace) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, topk_info: SimpleNamespace) -> torch.Tensor:
         B, N, C = x.size()
         ### Emulate qkv matrix from TIMM VisionTransformer
         ### Code is taken from forward(...) of TIMM VisonTransformer Attention Block
@@ -176,7 +168,7 @@ class TopKTIMMAttention(Attention):
         attn = (q @ k.transpose(-2, -1)) * self.scale
         attn = attn.softmax(dim=-1)
 
-        metric = TopKMetric(attn, pomt_info)
+        metric = TopKMetric(attn, topk_info)
 
         ### Dropout Layer
         attn = self.attn_drop(attn)
@@ -217,28 +209,22 @@ class TopKAttentionBlock(Block):
     ### token decision mask will have shape (batch size, # tokens, 1)
     ###
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        attn, metric = self.attn(self.norm1(x), self._pomt_info)
+        attn, metric = self.attn(self.norm1(x), self._topk_info)
         x = x + self.drop_path1(self.ls1(attn))
 
-        x = TopKForward(x, metric, self._pomt_info)
+        x = TopKForward(x, metric, self._topk_info)
 
         x = x + self.drop_path2(self.ls2(self.mlp(self.norm2(x))))
         return x
 
 
 ###
-### Wrapper Function
+### Wrapper Functions
 ### Heavily inspired by Token Merging apply_patch(...) and model wrapping technique
 ###
-def get_timm_wrapped_class(vit : torch.nn.Module):
-    ### Define our own little function that steals the class from the input 'vit'
+def make_pomt_class(vit : torch.nn.Module):
     class POMTVisionTransformer(vit.__class__):
-        ###
-        ### Overloaded from TIMM VisionTransformer - slightly modified to remove the checkpoint_seq(...) call
-        ###
         def forward(self, x: torch.Tensor) -> Tuple:
-            ### Update self._pomt_info
-            ### Check what self.r is update accordingly
             if isinstance(self.r, list):
                 assert(len(self.r) == len(self.blocks))
                 self._pomt_info.r = copy.deepcopy(self.r)
@@ -253,12 +239,29 @@ def get_timm_wrapped_class(vit : torch.nn.Module):
     return POMTVisionTransformer
 
 
+def make_topk_class(vit : torch.nn.Module):
+    class TopKVisionTransformer(vit.__class__):
+        def forward(self, x: torch.Tensor) -> Tuple:
+            if isinstance(self.r, list):
+                assert(len(self.r) == len(self.blocks))
+                self._topk_info.r = copy.deepcopy(self.r)
+            elif isinstance(self.r, int):
+                self._topk_info.r = [self.r] * len(self.blocks)
+            else:
+                raise AssertionError(f"Improper r type {type(self.r)}")
+            
+            return super().forward(x)
+
+    ### Return
+    return TopKVisionTransformer
+
+
 ###
-### Patch a specific model
+### Patch with either POMT or Top-K
 ###
 def timm_apply_pomt_patch(args : Namespace, vit : torch.nn.Module) -> torch.nn.Module:
     ### Generate class
-    POMTVisionTransformerClass = get_timm_wrapped_class(vit)
+    POMTVisionTransformerClass = make_pomt_class(vit)
     vit.__class__ = POMTVisionTransformerClass
 
     ### Store metadata for our data
@@ -267,16 +270,43 @@ def timm_apply_pomt_patch(args : Namespace, vit : torch.nn.Module) -> torch.nn.M
         prefix_tokens=vit.num_prefix_tokens,
     )
 
-    ###
-    ### Replace modules as necessary
-    ###
     for module in vit.modules():
         if isinstance(module, Block):
-            module.__class__ = POMTAttentionBlock if args.wrapper == "pomt" else TopKAttentionBlock
+            module.__class__ = POMTAttentionBlock
             module._pomt_info = vit._pomt_info
             module.pomt_discard_indices = None
         if isinstance(module, Attention):
-            module.__class__ = POMTAttention if args.wrapper == "pomt" else TopKTIMMAttention
+            module.__class__ = POMTAttention
 
+    ### Set R
+    ### Single layer pruning
+    r = [0] * len(vit.blocks)
+    r[args.pomt_prune_layer_index] = args.pomt_R
+    vit.r = args.r
+
+    return vit
+
+
+def timm_apply_topk_patch(args : Namespace, vit : torch.nn.Module) -> torch.nn.Module:
+    ### Generate class
+    TopKVisionTransformerClass = make_topk_class(vit)
+    vit.__class__ = TopKVisionTransformerClass
+
+    ### Store metadata for our data
+    vit._topk_info = SimpleNamespace(
+        r = 0,
+        prefix_tokens=vit.num_prefix_tokens,
+    )
+
+    for module in vit.modules():
+        if isinstance(module, Block):
+            module.__class__ = TopKAttentionBlock
+            module._topk_info = vit._topk_info
+        if isinstance(module, Attention):
+            module.__class__ = TopKTIMMAttention
+
+    ### Set r
+    r = [args.topk_R] * len(vit.blocks)
+    vit.r = r
 
     return vit

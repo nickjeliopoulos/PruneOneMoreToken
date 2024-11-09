@@ -11,6 +11,7 @@
 from typing import Tuple
 
 import torch
+import argparse
 from timm.models.vision_transformer import Attention, Block, VisionTransformer
 
 from tome.merge import bipartite_soft_matching, merge_source, merge_wavg
@@ -109,7 +110,7 @@ def make_tome_class(transformer_class):
     return ToMeVisionTransformer
 
 
-def apply_patch(model: VisionTransformer, trace_source: bool = False, prop_attn: bool = True):
+def apply_patch(args: argparse.Namespace, model: VisionTransformer):
     """
     Applies ToMe to this transformer. Afterward, set r using model.r.
 
@@ -121,14 +122,15 @@ def apply_patch(model: VisionTransformer, trace_source: bool = False, prop_attn:
     """
     ToMeVisionTransformer = make_tome_class(model.__class__)
 
+    ### NOTE: We set trace_source and prop_attn manually. See above comments from original ToMe repo.
     model.__class__ = ToMeVisionTransformer
-    model.r = 0
+    model.r = args.tome_R
     model._tome_info = {
         "r": model.r,
         "size": None,
         "source": None,
-        "trace_source": trace_source,
-        "prop_attn": prop_attn,
+        "trace_source": False,
+        "prop_attn": True,
         "class_token": model.cls_token is not None,
         "distill_token": False,
     }

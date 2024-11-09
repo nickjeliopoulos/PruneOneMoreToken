@@ -11,10 +11,9 @@ def file_formatter(args: argparse.Namespace, suffix: str, extension: str) -> str
     return f"{args.output_dir}/{args.model}_{args.device_name}_bs_{args.batch_size}_{suffix}.{extension}"
 
 
-### Arguments
 def get_offline_compute_arguments():
     st = "store_true"
-    parser = argparse.ArgumentParser(description="Offline Computation")
+    parser = argparse.ArgumentParser(description="Offline Computation Arguments")
     parser.add_argument("--model", type=str, default="vit_small_patch16_224")
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--dataset-root", type=str, default=None)
@@ -29,6 +28,37 @@ def get_offline_compute_arguments():
     parser.add_argument("--output-dir", type=str, default="bin/")
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--prefix-tokens", type=int, choices=[1], default=1)
+    parser.add_argument("--num-workers", type=int, default=4)
+    args = parser.parse_args()
+
+    if "cuda" in args.device:
+        args.device_name = torch.cuda.get_device_name( torch.device(args.device) )
+    elif "mps" in args.device:
+        args.device_name = "mps"
+    else:
+        args.device_name = "cpu"
+
+    return args
+
+
+def get_benchmark_arguments():
+    st = "store_true"
+    parser = argparse.ArgumentParser(description="Benchmark Arguments")
+    parser.add_argument("--model", type=str, default="vit_small_patch16_224")
+    parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--dataset-root", type=str, default=None)
+    parser.add_argument("--grid-token-start", type=int, default=196)
+    parser.add_argument("--grid-token-end", type=int, default=2)
+    parser.add_argument("--grid-token-stride", type=int, default=1)
+    parser.add_argument("--plot-mode", type=str, default="line", choices=["line", "scatter"])
+    parser.add_argument("--output-dir", type=str, default="bin/")
+    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--prefix-tokens", type=int, choices=[1], default=1)
+    parser.add_argument("--wrapper", type=str, choices=["pomt","tome","topk","none"], default="none")
+    parser.add_argument("--pomt-prune-layer-index", type=int, default=3)
+    parser.add_argument("--pomt-R", type=int, default=None)
+    parser.add_argument("--tome-R", type=int, default=None)
+    parser.add_argument("--topk-R", type=int, default=None)
     parser.add_argument("--num-workers", type=int, default=4)
     args = parser.parse_args()
 

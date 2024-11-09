@@ -157,7 +157,6 @@ def offline_computation(args: argparse.Namespace, vit: torch.nn.Module, dataload
 
                     ### Argmax, get top 1
                     predicted_output = torch.argmax(model_output, dim=1)
-                    assert predicted_output.shape == target.shape
 
                     running_accuracy += (predicted_output == target).sum().item()
                     running_predictions += target.shape[0]

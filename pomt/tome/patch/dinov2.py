@@ -1,4 +1,5 @@
 import torch
+import argparse
 
 ### DinoV2
 from dinov2.layers.block import (
@@ -239,22 +240,22 @@ def make_tome_class(transformer_class: _LinearClassifierWrapper):
 
 
 ###
-### "Master" function to apply ToMe to a DinoV2 model
+### "Master" function to apply ToMe to a DinoV2 vit
 ###
-def apply_patch(model: _LinearClassifierWrapper, trace_source: bool = False, prop_attn: bool = True):
-    assert isinstance(model, _LinearClassifierWrapper)
+def apply_patch(args: argparse.Namespace, vit: _LinearClassifierWrapper):
+    assert isinstance(vit, _LinearClassifierWrapper)
 
-    ToMeDinoVisionTransformer = make_tome_class(model.__class__)
+    ToMeDinoVisionTransformer = make_tome_class(vit.__class__)
 
-    model.__class__ = ToMeDinoVisionTransformer
-    model.r = 0
-    model._tome_info = {
-        "r": model.r,
+    vit.__class__ = ToMeDinoVisionTransformer
+    vit.r = args.tome_R
+    vit._tome_info = {
+        "r": vit.r,
         "size": None,
         "source": None,
-        "trace_source": trace_source,
-        "prop_attn": prop_attn,
-        ### TODO: Assumption: this is True. Change based on model eh?
+        "trace_source": False,
+        "prop_attn": True,
+        ### TODO: Assumption: this is True. Change based on vit eh?
         "class_token": True,
         ### TODO: Currently does not support arbitrary special tokens (think register tokens)
         "distill_token": False,
@@ -263,17 +264,17 @@ def apply_patch(model: _LinearClassifierWrapper, trace_source: bool = False, pro
     warn_prop_attn = False
 
     ### Iterate over backbone modules
-    for module in model.backbone.modules():
+    for module in vit.backbone.modules():
         assert not isinstance(module, MemEffAttention), "MemEffAttention is not supported by POMT"
 
         ### Note: order matters
         if isinstance(module, NestedTensorBlock):
             module.__class__ = ToMeDinoV2NestedTensorBlock
-            module._tome_info = model._tome_info
+            module._tome_info = vit._tome_info
         elif isinstance(module, Block):
             module.__class__ = ToMeDinoV2Block
-            module._tome_info = model._tome_info
+            module._tome_info = vit._tome_info
         elif isinstance(module, Attention):
             module.__class__ = ToMeDinoV2Attention
 
-    return model
+    return vit
