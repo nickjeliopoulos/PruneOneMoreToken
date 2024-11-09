@@ -75,6 +75,6 @@ def compute_r(args: argparse.Namespace, x : List, U: numpy.ndarray) -> Tuple:
     N = args.max_vit_token_count
     token_series_index = numpy.argmax(U)
     target_token_count = x[token_series_index]
-    R = N - target_token_count
+    R = N - (target_token_count + args.prefix_tokens)
     return R
 

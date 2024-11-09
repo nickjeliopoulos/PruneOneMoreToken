@@ -210,8 +210,8 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
         return handle
 
     ### Done with modules - time to plot
-    x = numpy.array(list(L_n.keys()))
-    x = 100.0 * x / numpy.max(x)
+    x_tokens = numpy.array(list(L_n.keys()))
+    x_density = 100.0 * x_tokens / numpy.max(x_tokens)
 
     ### Get other series
     L = numpy.array(list(L_n.values()))
@@ -231,13 +231,13 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
 
     ### Latency Plotting?
     if args.latency:
-        latency_handle = _plot_helper(args, axes[0], x, L, c="blue")
+        latency_handle = _plot_helper(args, axes[0], x_density, L, c="blue")
         axes[0].set_xlabel("Token Density (%)")
         axes[0].set_ylabel("Latency (ms)")
 
     ### Accuracy Plotting?
     if args.accuracy:
-        accuracy_handle = _plot_helper(args, axes[1], x, A, c="red")
+        accuracy_handle = _plot_helper(args, axes[1], x_density, A, c="red")
         axes[1].set_xlabel("Token Density (%)")
         axes[1].set_ylabel("Estimated Accuracy (%)")
         axes[1].set_ybound(lower=0, upper=100.0)
@@ -245,9 +245,9 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
     ### Plot Utility in addition to latency and accuracy
     if args.latency and args.accuracy:
         U = compute_utility(args, L, A)
-        R = compute_r(args, x, U)
-        print(f"Computed R: {R}")
-        utility_handle = _plot_helper(args, axes[2], x, U, c="orange")
+        R = compute_r(args, x_tokens, U)
+        print(f"Computed R={R} given N={prefix_tokens+N} input tokens")
+        utility_handle = _plot_helper(args, axes[2], x_density, U, c="orange")
         axes[2].set_xlabel("Token Density (%)")
         axes[2].set_ylabel("Utility")
         axes[2].set_ybound(lower=0, upper=1.1)
@@ -283,7 +283,6 @@ if __name__ == "__main__":
     if args.accuracy:
         im1k_dataset = create_imagenet1k_dataset(args.dataset_root, False)
         im1k_dataloader = create_im1k_timm_dataloader(im1k_dataset, args.batch_size)
-    print(f"Loaded dataset")
 
     ### Perform offline computation
     L_n, A_n = offline_computation(args, vit, im1k_dataloader)
