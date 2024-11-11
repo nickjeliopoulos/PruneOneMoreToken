@@ -1,8 +1,8 @@
 <div align="center">
 
-# Pruning One More Token is Enough (POMT)
+# WACV 2025: Pruning One More Token is Enough (POMT)
 
-[![arXiV](https://img.shields.io/badge/arXiV-611111?logo=arxiv)](https://arxiv.org/abs/2407.05941) [![WACV](https://img.shields.io/badge/WACV%202025-0098d3)](https://arxiv.org/abs/2407.05941)
+[![arXiV](https://img.shields.io/badge/arXiV-611111?logo=arxiv)](https://arxiv.org/abs/2407.05941) [![WACV](https://img.shields.io/badge/Proceeding-0098d3)](https://arxiv.org/abs/2407.05941) [![Zenodo](https://img.shields.io/badge/Zenodo-1682d4)](https://google.com)
 
 </div>
 
@@ -40,7 +40,7 @@ python -m pip install ./
 ```
 
 <!-- Usage Guide -->
-# Usage 
+# Usage
 > [!CAUTION]
 > To best reproduce latency measurements, we encourage users to lock the clock and/or memory rates of their device.
 > See the `scripts/` folder for a brief overview of how this is done on NVIDIA GPUs.
@@ -52,27 +52,29 @@ Given a device and a pre-trained model, it measures the latency-workload relatio
 
 Example for DeiT-S with batch-size=4. You can also control the granularity of the grid-search with (start,stop,stride) parameters:
 ```bash
-python offline_computation.py --model deit_small_patch16_224 --batch-size 4 --grid-token-start 196 --grid-token-stop 2 --grid-token-stride 1
-> Loaded model deit_small_patch16_224
+> sudo bash scripts/jetson_agxorin_set_clocks.sh
+> python offline_computation.py --model deit_small_patch16_224 --batch-size 4 --grid-token-start 196 --grid-token-stop 2 --grid-token-stride 1
+Loaded model deit_small_patch16_224
 ...
-> Computed R=56 given N=197 input tokens
-> Done!
+Computed R=56 given N=197 input tokens
+Done!
 ```
 
 ## benchmark.py
-Following the previous example, we now benchmark the DeiT-S model with our pruning method using the computed *R*
-`benchmark.py` supports wrapping a TIMM ViT/DeiT models and DinoV2 models with ToMe, Top-K, POMT, or no wrapper (baseline model measurements).
+Following the previous example, we now benchmark the DeiT-S model with our pruning method using the computed *R*.
+The benchmarking script supports wrapping TIMM ViT/DeiT models and DinoV2 models with ToMe, Top-K, POMT, or no wrapper for baseline model measurements.
 
 ```bash
-python benchmark.py --model deit_small_patch16_224 --batch-size 4 --pomt-R 56
-> Loaded model deit_small_patch16_224
+> python benchmark.py --model deit_small_patch16_224 --batch-size 4 --pomt-R 56
+Loaded model deit_small_patch16_224
 ...
-> Saved report bin/deit_small_patch16_224_bs_4_pomt_R56.csv
-> Done! 
+Saved report bin/deit_small_patch16_224_bs_4_pomt_R56.csv
+Done! 
 ```
 
 <!-- Citation -->
 # Citation 
+## BibTeX
 ```bib
 @article{prune_one_more_2024,
   title   = {Pruning One More Token is Enough: Leveraging Latency-Workload Non-Linearities for Vision Transformers on the Edge},
@@ -81,6 +83,7 @@ python benchmark.py --model deit_small_patch16_224 --batch-size 4 --pomt-R 56
   year    = {2024}
 }
 ```
+### APA
 ```
 Eliopoulos, N. J., Jajal, P., Liu, G., Davis, J., Thiravathukal, G. K., & Lu, Y-H. (2024). Pruning one more token is enough: Leveraging latency-workload non-linearities for vision transformers on the edge. WACV.
 ```

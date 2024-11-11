@@ -251,6 +251,23 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
         axes[2].set_ylabel("Utility")
         axes[2].set_ybound(lower=0, upper=1.1)
 
+        ### .CSV report name
+        csv_report_filename = file_formatter(args, "offline_report", "csv")
+
+        ### Save as .CSV data
+        offline_report_df = pandas.DataFrame(
+            data={
+                "Model" : [args.model],
+                "Device" : [args.device_name],
+                "Batch Size": [args.batch_size],
+                "R": [R],
+            }
+        ).to_csv(
+            csv_report_filename,
+            float_format="{:.2f}".format,
+        )
+        print(f"Saved report to {csv_report_filename}")
+
     ### Formatting
     for axis in axes:
         axis.grid(axis="both", color="xkcd:light gray", linestyle="dashed", linewidth=3)

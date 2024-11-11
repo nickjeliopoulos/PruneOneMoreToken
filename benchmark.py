@@ -127,6 +127,10 @@ def benchmark(args: argparse.Namespace, vit: nn.Module, dataloader: DataLoader) 
 if __name__ == "__main__":
     args = get_benchmark_arguments()
 
+    ### Create output directory if it does not exist
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+
     ### Input checking
     assert (args.dataset_root is not None), "Supply path ending in the ImageNet1K .../ILSVRC/Data/CLS-LOC/ directory"
 
