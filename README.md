@@ -46,11 +46,16 @@ python -m pip install ./
 > See the `scripts/` folder for a brief overview of how this is done on NVIDIA GPUs.
 > We provide two scripts to set maximum power mode for the NVIDIA Jetson TX2 and the NVIDIA AGX Orin (32GB) devices used in our work.
 
-## offline_computation.py
-This script performs the offline pruning schedule computation described in our work.
-Given a device and a pre-trained model, it measures the latency-workload relationship for this device-model pair, then identifies a number of tokens to prune.
+We illustrate an example of our method on DeiT-S deployed on an NVIDIA AGX Orin below. For an exhaustive list of commandline arguments, see `get_offline_compute_arguments(...)` and `get_benchmark_arguments(...)` in `pomt/utils.py`.
 
-Example for DeiT-S with batch-size=4. You can also control the granularity of the grid-search with (start,stop,stride) parameters:
+## offline_computation.py
+As its name implies, `offline_computation.py` identifies a number of tokens to prune *R* according to the offline computation from our work. Given a device and a pre-trained model, it measures the latency-workload relationship for this device-model pair. Then, we compute *R* using a heuristic based on this relationship. You can also control the granularity (and runtime) of the grid-search with (start,stop,stride) parameters.
+
+> [!TIP]
+> It is also possible to separate the grid-search for latency and the grid-search for accuracy estimation. 
+> For example, you can estimate accuracy with a high batch size on a more powerful device, then measure latency on the target device for a particular batch size.
+
+Below is an example use of `offline_computation.py` for DeiT-S with batch-size=4:
 ```bash
 > sudo bash scripts/jetson_agxorin_set_clocks.sh
 > python offline_computation.py --model deit_small_patch16_224 --batch-size 4 --grid-token-start 196 --grid-token-stop 2 --grid-token-stride 1
@@ -61,8 +66,7 @@ Done!
 ```
 
 ## benchmark.py
-Following the previous example, we now benchmark the DeiT-S model with our pruning method using the computed *R*.
-The benchmarking script supports wrapping TIMM ViT/DeiT models and DinoV2 models with ToMe, Top-K, POMT, or no wrapper for baseline model measurements.
+Following the previous example, we now benchmark the DeiT-S model with our pruning method using the computed *R* via `benchmark.py`. The benchmarking script supports wrapping TIMM ViT/DeiT models and DinoV2 models with ToMe, Top-K, POMT, or no wrapper for baseline model measurements.
 
 ```bash
 > python benchmark.py --model deit_small_patch16_224 --batch-size 4 --pomt-R 56
