@@ -2,13 +2,14 @@ import torch
 import torch.nn as nn
 import timm
 import argparse
+import pandas
 import numpy
 from tqdm import tqdm
 import os
 from torch.utils.data import DataLoader
 from typing import Dict, Tuple, Any, Callable, Union, Sequence
 
-from pomt.utils import file_formatter, get_offline_compute_arguments, benchmark_latency_ms, compute_r, compute_utility
+from pomt.utils import file_formatter, offline_compute_file_formatter, get_offline_compute_arguments, benchmark_latency_ms, compute_r, compute_utility
 from pomt.datasets import create_imagenet1k_dataset, create_im1k_dinov2_dataloader, create_im1k_timm_dataloader
 
 
@@ -260,13 +261,18 @@ def generate_plots(args: argparse.Namespace, L_n: Dict, A_n: Dict):
                 "Model" : [args.model],
                 "Device" : [args.device_name],
                 "Batch Size": [args.batch_size],
+                "Max Token Count" : [N+prefix_tokens],
+                "Prefix Tokens" : [prefix_tokens],
+                "Grid Search Token Start": [args.grid_token_start],
+                "Grid Search Token End": [args.grid_token_end-1],
+                "Grid Search Token Stride": [-args.grid_token_stride],
                 "R": [R],
             }
         ).to_csv(
             csv_report_filename,
             float_format="{:.2f}".format,
         )
-        print(f"Saved report to {csv_report_filename}")
+        print(f"Saved offline computation report to {csv_report_filename}")
 
     ### Formatting
     for axis in axes:

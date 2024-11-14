@@ -1,0 +1,28 @@
+{
+    "upload_type": "software",
+    "title": "nickjeliopoulos/PruneOneMoreToken",
+    "creators": [
+        {
+        "name": "Eliopoulos, Nick John",
+        "affiliation": "Purdue University",
+        "orcid": "0000-0003-1692-8586"
+        },
+        {
+        "name": "Thiruvathukal, George K.",
+        "affiliation": "Loyola University Chicago and Argonne National Laboratory",
+        "orcid": "0000-0002-0452-5571"
+        }
+    ],
+    "description": "Pruning One More Token is Enough: Leveraging Latency-Workload Non-Linearities for Vision Transformers on the Edge",
+    "access_right": "open",
+    "license": "BSD-3-Clause",
+    "prereserve_doi": true,
+    "keywords": [
+        "deep learning",
+		"efficient computing",
+		"token sparsification",
+		"token pruning",
+		"token merging",
+		"vision transformer"
+    ]
+}

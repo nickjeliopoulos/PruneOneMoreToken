@@ -6,9 +6,20 @@ from typing import Dict, List, Tuple, Any, Callable, Union, Sequence
 
 BENCHMARK_MIN_RUN_TIME=2.0
 
+
 ### Generic Filename Formatter, for consistency and avoiding having to write f"" strings everywhere
 def file_formatter(args: argparse.Namespace, suffix: str, extension: str) -> str:
     return f"{args.output_dir}/{args.model}_bs_{args.batch_size}_{suffix}.{extension}"
+
+
+def offline_compute_file_formatter(args: argparse.Namespace, suffix: str, extension: str) -> str:
+    return f"{args.output_dir}/{args.model}_bs_{args.batch_size}_{suffix}.{extension}"
+
+
+def benchmark_file_formatter(args: argparse.Namespace, suffix: str, extension: str) -> str:
+    r = args.pomt_R if args.wrapper == "pomt" else args.tome_R if args.wrapper == "tome" else args.topk_R if args.wrapper == "topk" else None
+    r = f"_{args.wrapper}_r{r}_" if r else "_"
+    return f"{args.output_dir}/{args.model}{r}bs_{args.batch_size}_{suffix}.{extension}"
 
 
 def get_offline_compute_arguments():

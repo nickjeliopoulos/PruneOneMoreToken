@@ -282,7 +282,7 @@ def timm_apply_pomt_patch(args : Namespace, vit : torch.nn.Module) -> torch.nn.M
     ### Single layer pruning
     r = [0] * len(vit.blocks)
     r[args.pomt_prune_layer_index] = args.pomt_R
-    vit.r = args.r
+    vit.r = r
 
     return vit
 

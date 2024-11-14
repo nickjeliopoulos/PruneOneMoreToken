@@ -9,7 +9,7 @@ import os
 from torch.utils.data import DataLoader
 from typing import Dict, Tuple, Any, Callable, Union, Sequence
 
-from pomt.utils import file_formatter, get_benchmark_arguments, benchmark_latency_ms
+from pomt.utils import file_formatter, benchmark_file_formatter, get_benchmark_arguments, benchmark_latency_ms
 from pomt.datasets import create_imagenet1k_dataset, create_im1k_dinov2_dataloader, create_im1k_timm_dataloader
 from pomt.tome.patch.timm import apply_patch as timm_apply_tome_patch
 from pomt.tome.patch.dinov2 import apply_patch as dinov2_apply_tome_patch
@@ -104,7 +104,7 @@ def benchmark(args: argparse.Namespace, vit: nn.Module, dataloader: DataLoader) 
         A = 100 * running_accuracy / running_predictions
 
     ### .CSV report name
-    csv_report_filename = file_formatter(args, "evaluation", "csv")
+    csv_report_filename = benchmark_file_formatter(args, "evaluation", "csv")
 
     ### Save as .CSV data
     eval_report = pandas.DataFrame(
@@ -112,6 +112,8 @@ def benchmark(args: argparse.Namespace, vit: nn.Module, dataloader: DataLoader) 
             "Model" : [args.model],
             "Device" : [args.device_name],
             "Batch Size": [args.batch_size],
+            "Wrapper" : [args.wrapper],
+            "Prefix Tokens" : [prefix_tokens],
             "Accuracy (%)": [A],
             "Median Latency (ms)": [L],
         }
@@ -119,7 +121,7 @@ def benchmark(args: argparse.Namespace, vit: nn.Module, dataloader: DataLoader) 
         csv_report_filename,
         float_format="{:.2f}".format,
     )
-    print(f"Saved report to {csv_report_filename}")
+    print(f"Saved evaluation report to {csv_report_filename}")
 
     return L, A, eval_report
 
