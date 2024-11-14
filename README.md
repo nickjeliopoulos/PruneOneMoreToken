@@ -2,7 +2,8 @@
 
 # WACV 2025: Pruning One More Token is Enough (POMT)
 
-[![arXiV](https://img.shields.io/badge/arXiV-611111?logo=arxiv)](https://arxiv.org/abs/2407.05941) [![WACV](https://img.shields.io/badge/Proceeding-0098d3)](https://arxiv.org/abs/2407.05941) [![Zenodo](https://img.shields.io/badge/Zenodo-1682d4)](https://google.com)
+[![arXiV](https://img.shields.io/badge/arXiV-611111?logo=arxiv)](https://arxiv.org/abs/2407.05941) [![WACV](https://img.shields.io/badge/Proceeding-0098d3)](https://arxiv.org/abs/2407.05941) [![DOI](https://zenodo.org/badge/883424324.svg)](https://doi.org/10.5281/zenodo.14160538)
+
 
 </div>
 
