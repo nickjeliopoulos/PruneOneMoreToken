@@ -26,13 +26,16 @@ Vision transfomers (ViTs) are a common architectural component of deep neural ne
 
 <!-- Structure -->
 # Repository Structure [Relevant Section(s) in Paper]
-- `pomt/`
-   - `dinov2/`
-   - `tome/`
-   - `timm_patch.py` [**§3.3**]
-   - `dinov2_patch.py` [**§3.3**]
-- `benchmark.py` [**§4.x**]
-- `offline_computation.py` [**§3.1-2**]
+
+| Directory/File             | Relevant Section(s) in Paper |
+|----------------------------|------------------------------|
+| `pomt/`                    |                              |
+| `pomt/dinov2/`             |                              |
+| `pomt/tome/`               |                              |
+| `pomt/timm_patch.py`       | **§3.3**                     |
+| `pomt/dinov2_patch.py`     | **§3.3**                     |
+| `benchmark.py`             | **§4.x**                     |
+| `offline_computation.py`   | **§3.1-2**                   |
 
 <!-- Installation Guide -->
 # Installation 
