@@ -26,13 +26,13 @@ Vision transfomers (ViTs) are a common architectural component of deep neural ne
 
 <!-- Structure -->
 # Repository Structure [Relevant Section(s) in Paper]
-* pomt/
-  * dinov2/
-  * tome/
-  * timm_patch.py [**§3.3**]
-  * dinov2_patch.py [**§3.3**]
-* benchmark.py [**§4.x**]
-* offline_computation.py [**§3.1-2**]
+- `pomt/`
+   - `dinov2/`
+   - `tome/`
+   - `timm_patch.py` [**§3.3**]
+   - `dinov2_patch.py` [**§3.3**]
+- `benchmark.py` [**§4.x**]
+- `offline_computation.py` [**§3.1-2**]
 
 <!-- Installation Guide -->
 # Installation 
@@ -78,8 +78,13 @@ Done!
 ```
 
 <!-- Citation -->
-# Citation 
-## BibTeX
+# Citations
+To cite this repository or the associated work, please use the following citations:
+
+### APA
+Eliopoulos, N. J., Jajal, P., Liu, G., Davis, J., Thiravathukal, G. K., & Lu, Y-H. (2024). Pruning one more token is enough: Leveraging latency-workload non-linearities for vision transformers on the edge. WACV.
+
+### BibTeX
 ```bib
 @article{prune_one_more_2024,
   title   = {Pruning One More Token is Enough: Leveraging Latency-Workload Non-Linearities for Vision Transformers on the Edge},
@@ -88,7 +93,6 @@ Done!
   year    = {2024}
 }
 ```
-### APA
-```
-Eliopoulos, N. J., Jajal, P., Liu, G., Davis, J., Thiravathukal, G. K., & Lu, Y-H. (2024). Pruning one more token is enough: Leveraging latency-workload non-linearities for vision transformers on the edge. WACV.
-```
+
+### DOI
+https://doi.org/10.5281/zenodo.14160538
